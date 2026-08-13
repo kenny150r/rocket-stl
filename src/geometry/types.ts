@@ -52,8 +52,10 @@ export type FinSet = {
   nFins: number;
   rollDeg: number;
   cantDeg: number;
-  /** Axial hinge station; `null` = ¼ root chord from the LE. */
+  /** Axial hinge station from the nose; `null` = ½ root chord from the LE. */
   hingeX: number | null;
+  /** How a manual hingeX is entered in the UI. Geometry always uses station from the nose. */
+  hingeRef: 'nose' | 'rootTip';
   /** + tips up (+Y) on the horizontal pair. */
   elevatorDeg: number;
   /** + trailing tips of the vertical pair toward +Z (yaw about +Y). */

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultSpec } from '../src/geometry/defaults';
 import { arcasSpec } from '../src/presets/arcas';
-import { decodeSpec, encodeSpec, hashForSpec, specFromHash } from '../src/ui/shareUrl';
+import { coerceSpec, decodeSpec, encodeSpec, hashForSpec, specFromHash } from '../src/ui/shareUrl';
 
 describe('share URL', () => {
   it('round-trips a default spec through the hash token', () => {
@@ -16,6 +16,13 @@ describe('share URL', () => {
     expect(hash.startsWith('#s=')).toBe(true);
     expect(specFromHash(hash)?.name).toBe(spec.name);
     expect(specFromHash(hash)?.segments).toHaveLength(3);
+  });
+
+  it('defaults missing hingeRef to nose', () => {
+    const spec = defaultSpec();
+    const raw = JSON.parse(JSON.stringify(spec)) as { finSets: { hingeRef?: string }[] };
+    delete raw.finSets[0].hingeRef;
+    expect(coerceSpec(raw)?.finSets[0].hingeRef).toBe('nose');
   });
 
   it('rejects junk', () => {

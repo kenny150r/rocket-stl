@@ -81,6 +81,7 @@ function coerceFin(item: unknown): FinSet | null {
     rollDeg: num(f.rollDeg) ?? 0,
     cantDeg: num(f.cantDeg) ?? 0,
     hingeX: num(f.hingeX),
+    hingeRef: f.hingeRef === 'rootTip' ? 'rootTip' : 'nose',
     elevatorDeg: num(f.elevatorDeg) ?? 0,
     rudderDeg: num(f.rudderDeg) ?? 0,
     aileronDeg: num(f.aileronDeg) ?? 0,

@@ -1,4 +1,5 @@
 import { aftDiameter, bodyLength, foreDiameter, radiusAt } from './body';
+import { resolvedHingeX } from './fins';
 import { resolvePlanform } from './planform';
 import type { BlockingIssue, IssueTarget, RocketSpec } from './types';
 
@@ -129,10 +130,7 @@ export function validateSpec(spec: RocketSpec): BlockingIssue[] {
         issues.push({ level: 'error', message: `${fin.name}: root does not sit on the body.`, target: t('xLe') });
       }
     }
-    const xH =
-      typeof fin.hingeX === 'number' && Number.isFinite(fin.hingeX)
-        ? fin.hingeX
-        : fin.xLe + 0.25 * Math.max(pf.rootChord, 0);
+    const xH = resolvedHingeX(fin);
     if (xH < -1e-9 || xH > L + 1e-6) {
       issues.push({
         level: 'error',

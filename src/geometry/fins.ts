@@ -19,14 +19,32 @@ function cantAboutSpan(p: Vec3, origin: Vec3, cant: number): Vec3 {
   return [origin[0] + x * c - z * s, p[1], origin[2] + x * s + z * c];
 }
 
-/** Default hinge: quarter-chord of the root, on the body. */
+/** Default hinge: mid-chord of the root, on the body. */
 export function autoHingeX(fin: FinSet): number {
   const pf = resolvePlanform(fin);
-  return fin.xLe + 0.25 * Math.max(pf.rootChord, 0);
+  return fin.xLe + 0.5 * Math.max(pf.rootChord, 0);
 }
 
 export function resolvedHingeX(fin: FinSet): number {
   return typeof fin.hingeX === 'number' && Number.isFinite(fin.hingeX) ? fin.hingeX : autoHingeX(fin);
+}
+
+/** Root trailing-edge station (the root tip). */
+export function rootTipX(fin: FinSet): number {
+  const pf = resolvePlanform(fin);
+  return fin.xLe + Math.max(pf.rootChord, 0);
+}
+
+export function hingeFromRootTip(fin: FinSet): number {
+  return rootTipX(fin) - resolvedHingeX(fin);
+}
+
+export function hingeXFromRef(fin: FinSet, value: number, ref: FinSet['hingeRef']): number {
+  return ref === 'rootTip' ? rootTipX(fin) - value : value;
+}
+
+export function hingeDisplayValue(fin: FinSet): number {
+  return fin.hingeRef === 'rootTip' ? hingeFromRootTip(fin) : resolvedHingeX(fin);
 }
 
 export function copyRollRad(fin: FinSet, index: number): number {

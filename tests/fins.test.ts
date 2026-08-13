@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultSpec } from '../src/geometry/defaults';
-import { allFinCopies, autoHingeX, localHingeDeg } from '../src/geometry/fins';
+import { allFinCopies, autoHingeX, hingeFromRootTip, hingeXFromRef, localHingeDeg, rootTipX } from '../src/geometry/fins';
 import type { Vec3 } from '../src/geometry/types';
 
 function teCentroid(pts: Vec3[]): Vec3 {
@@ -15,10 +15,19 @@ function teCentroid(pts: Vec3[]): Vec3 {
 }
 
 describe('fin hinge mix', () => {
-  it('defaults the hinge to quarter-chord', () => {
+  it('defaults the hinge to half root chord', () => {
     const spec = defaultSpec();
     const fin = spec.finSets[0];
-    expect(autoHingeX(fin)).toBeCloseTo(fin.xLe + 0.25 * fin.rootChord, 12);
+    expect(autoHingeX(fin)).toBeCloseTo(fin.xLe + 0.5 * fin.rootChord, 12);
+  });
+
+  it('converts a hinge station from the root tip (root TE)', () => {
+    const spec = defaultSpec();
+    const fin = spec.finSets[0];
+    const fromTip = 0.03;
+    const hingeX = hingeXFromRef(fin, fromTip, 'rootTip');
+    expect(hingeX).toBeCloseTo(rootTipX(fin) - fromTip, 12);
+    expect(hingeFromRootTip({ ...fin, hingeX })).toBeCloseTo(fromTip, 12);
   });
 
   it('moves the horizontal-pair trailing edge up for +elevator', () => {

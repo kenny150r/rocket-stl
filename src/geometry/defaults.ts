@@ -44,6 +44,7 @@ export function defaultFinSet(xLe = 1.35, name = 'Aft fins'): FinSet {
     rollDeg: 0,
     cantDeg: 0,
     hingeX: null,
+    hingeRef: 'nose',
     elevatorDeg: 0,
     rudderDeg: 0,
     aileronDeg: 0,

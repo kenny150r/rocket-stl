@@ -1,4 +1,4 @@
-import { resolvedHingeX } from '../geometry/fins';
+import { hingeDisplayValue, hingeXFromRef, resolvedHingeX } from '../geometry/fins';
 import { bodyLength } from '../geometry/body';
 import { defaultFinSet } from '../geometry/defaults';
 import { resolvePlanform, type ResolvedPlanform } from '../geometry/planform';
@@ -47,6 +47,7 @@ export function FinEditor({ spec, setSpec, issues }: Props) {
       <ul className="stack">
         {spec.finSets.map((fin) => {
           const pf = resolvePlanform(fin);
+          const hingeRef = fin.hingeRef === 'rootTip' ? 'rootTip' : 'nose';
           return (
             <li key={fin.id} className={`card${hasTarget(issues, 'fin', fin.id) ? ' invalid' : ''}`}>
               <div className="card-head">
@@ -87,22 +88,33 @@ export function FinEditor({ spec, setSpec, issues }: Props) {
               </div>
               <div className="field-group">
                 <h3>Hinge &amp; control</h3>
-                <NumberField
-                  label="Hinge from nose"
-                  value={resolvedHingeX(fin)}
-                  unit={unit}
-                  disabled={fin.hingeX == null}
-                  invalid={inv(fin.id, 'hingeX')}
-                  onChange={(hingeX) => patch(fin.id, { hingeX })}
-                />
                 <label className="check">
                   <input
                     type="checkbox"
                     checked={fin.hingeX == null}
                     onChange={(e) => patch(fin.id, { hingeX: e.target.checked ? null : resolvedHingeX(fin) })}
                   />
-                  Auto (¼ root chord)
+                  Auto (½ root chord)
                 </label>
+                {fin.hingeX != null && (
+                  <>
+                    <SelectField
+                      label="Hinge from"
+                      value={hingeRef}
+                      onChange={(v) => patch(fin.id, { hingeRef: v === 'rootTip' ? 'rootTip' : 'nose' })}
+                    >
+                      <option value="nose">Nose</option>
+                      <option value="rootTip">Root tip</option>
+                    </SelectField>
+                    <NumberField
+                      label={hingeRef === 'rootTip' ? 'Hinge from root tip' : 'Hinge from nose'}
+                      value={hingeDisplayValue({ ...fin, hingeRef })}
+                      unit={unit}
+                      invalid={inv(fin.id, 'hingeX')}
+                      onChange={(v) => patch(fin.id, { hingeX: hingeXFromRef(fin, v, hingeRef) })}
+                    />
+                  </>
+                )}
                 <NumberField
                   label="Elevator"
                   value={fin.elevatorDeg}
@@ -125,8 +137,9 @@ export function FinEditor({ spec, setSpec, issues }: Props) {
                   onChange={(aileronDeg) => patch(fin.id, { aileronDeg })}
                 />
                 <p className="muted tiny">
-                  Spanwise hinge; auto station is ¼ root chord. +Elevator: trailing tips up. +Rudder: trailing tips of
-                  the vertical pair toward +Z (yaw). +Aileron: clockwise from aft looking forward.
+                  Spanwise hinge; auto station is ½ root chord. Manual station is from the nose or from the root tip
+                  (root trailing edge). +Elevator: trailing tips up. +Rudder: trailing tips of the vertical pair toward
+                  +Z (yaw). +Aileron: clockwise from aft looking forward.
                 </p>
               </div>
               <div className="field-group">
