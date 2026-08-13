@@ -63,7 +63,9 @@ If the repo is not named `rocket-stl`, change `base` in `vite.config.ts` to matc
 
 ## CFD handoff
 
-The STL is a single watertight shell (fins are unioned). Point an external cut-cell solver at `geometry.files = ["rocket.stl"]`. Overlapping parts that are not Boolean-unioned will not be repaired by this app after export.
+The default STL is a single watertight shell (fins are unioned). Point an external cut-cell solver at `geometry.files = ["rocket.stl"]`. Overlapping parts that are not Boolean-unioned will not be repaired by this app after export.
+
+`npm run export:arcas` also writes `arcas_short_body_labeled.stl`, an ASCII multi-solid (`nose`, `cylinder`, `boattail`, `base`) so the solver can report forebody loads without the closed base.
 
 ## Arcas (NASA TN D-4013 / D-4014)
 
