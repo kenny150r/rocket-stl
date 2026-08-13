@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 type Props = {
   label: string;
@@ -55,14 +55,37 @@ export function SelectField({
   );
 }
 
-export function Section({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) {
+export function Section({
+  title,
+  children,
+  actions,
+  collapsible = false,
+  defaultOpen = true,
+}: {
+  title: string;
+  children: ReactNode;
+  actions?: ReactNode;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const shown = !collapsible || open;
   return (
     <section className="panel-section">
       <header>
-        <h2>{title}</h2>
-        {actions}
+        {collapsible ? (
+          <button type="button" className="section-toggle" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+            <span className="chevron" aria-hidden>
+              {open ? '▾' : '▸'}
+            </span>
+            <h2>{title}</h2>
+          </button>
+        ) : (
+          <h2>{title}</h2>
+        )}
+        {shown ? actions : null}
       </header>
-      {children}
+      {shown ? children : null}
     </section>
   );
 }

@@ -1,5 +1,5 @@
 import type { RocketSpec, Tessellation } from '../geometry/types';
-import { NumberField, Section, SelectField } from './fields';
+import { NumberField, Section } from './fields';
 
 type Props = {
   spec: RocketSpec;
@@ -12,7 +12,7 @@ export function TessellationPanel({ spec, setSpec }: Props) {
     setSpec({ ...spec, tessellation: { ...tes, ...update } });
   }
   return (
-    <Section title="Tessellation">
+    <Section title="Tessellation" collapsible defaultOpen={false}>
       <NumberField label="Circumferential nθ" value={tes.nTheta} step={4} min={12} onChange={(nTheta) => patch({ nTheta })} />
       <NumberField
         label="Axial samples / segment"
@@ -57,15 +57,6 @@ export function TessellationPanel({ spec, setSpec }: Props) {
         max={0.2}
         onChange={(finRootInsetFrac) => patch({ finRootInsetFrac })}
       />
-      <SelectField
-        label="Units (exported as-is)"
-        value={spec.units}
-        onChange={(units) => setSpec({ ...spec, units: units as RocketSpec['units'] })}
-      >
-        <option value="m">meters</option>
-        <option value="mm">millimeters</option>
-        <option value="in">inches</option>
-      </SelectField>
     </Section>
   );
 }

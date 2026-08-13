@@ -1,3 +1,4 @@
+import { arcasSpec } from './arcas';
 import { defaultCylinder, defaultFinSet, defaultNose, defaultSpec, defaultTaper, defaultTessellation } from '../geometry/defaults';
 import { newId } from '../geometry/ids';
 import type { RocketSpec } from '../geometry/types';
@@ -63,6 +64,26 @@ export const PRESETS: { id: string; label: string; spec: () => RocketSpec }[] = 
         tessellation: defaultTessellation(),
       };
     },
+  },
+  {
+    id: 'arcas-short',
+    label: 'Arcas short · fins (TN D-4013)',
+    spec: () => arcasSpec('short', true),
+  },
+  {
+    id: 'arcas-short-body',
+    label: 'Arcas short · body only',
+    spec: () => arcasSpec('short', false),
+  },
+  {
+    id: 'arcas-long',
+    label: 'Arcas long · fins (TN D-4014)',
+    spec: () => arcasSpec('long', true),
+  },
+  {
+    id: 'arcas-long-body',
+    label: 'Arcas long · body only',
+    spec: () => arcasSpec('long', false),
   },
 ];
 

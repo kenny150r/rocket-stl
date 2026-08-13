@@ -42,7 +42,13 @@ insert into public.rocket_stl_allowlist (email, notes) values ('someone@example.
 3. **Authentication → URL configuration**: Site URL = `https://<user>.github.io/rocket-stl/` (and `http://localhost:5173` for local).
 4. Copy `.env.example` to `.env.local` (already filled if you used the Cursor Supabase connection). For GitHub Pages, set secrets `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from that file.
 
-The anon key is public (it ships in the JS bundle). RLS only lets an authenticated user **select their own allowlist row**. Do not put the `service_role` key in this repo or in GitHub Actions.
+The anon key is public (it ships in the JS bundle). RLS only lets an authenticated user **select their own allowlist row** and **CRUD their own rows** in `rocket_stl_designs`. Do not put the `service_role` key in this repo or in GitHub Actions.
+
+## Sharing and saved designs
+
+The current geometry is written into the URL hash (`#s=…`). **Copy link** copies that URL. Opening it restores the design.
+
+**Save** / **Library** store named configs. When you are signed in they go to `rocket_stl_designs` (your account only). Local `npm run dev` without `.env.local` keeps them in this browser instead. Saving with the same model name overwrites that entry.
 
 ## GitHub Pages
 
@@ -58,3 +64,24 @@ If the repo is not named `rocket-stl`, change `base` in `vite.config.ts` to matc
 ## CFD handoff
 
 The STL is a single watertight shell (fins are unioned). Point an external cut-cell solver at `geometry.files = ["rocket.stl"]`. Overlapping parts that are not Boolean-unioned will not be repaired by this app after export.
+
+## Arcas (NASA TN D-4013 / D-4014)
+
+Presets rebuild the **½-scale wind-tunnel model** (not the flight vehicle): tangent ogive, cylinder, boat-tail, optional cruciform double-wedge fins. Units are metres.
+
+| | Short (Robin) | Long |
+|---|---|---|
+| L/D | 18.20 | 23.77 |
+| d | 2.25 in = 0.05715 m | same |
+| Nose | 4.71 d tangent ogive, 0.062 in tip radius | same |
+| Boat-tail | 3.65 in to 0.65 d | same |
+| Moment ref | 0.70 L | 0.70 L |
+
+Compare Euler **CN, Cm** and **CA vs CA,corr** (base-corrected). Skip the documented pitch-up near 8–16° (viscous). Fins-off first, then uncanted fins.
+
+```bash
+npm run export:arcas
+```
+
+Writes `export/arcas_short_body.stl` and `export/arcas_short.stl`, and copies them into `../ext-aero-3d/cases/arcas-short/` when that folder exists. Solver inputs live in the [ext-aero-3d](https://github.com/kenny150r/ext-aero-3d) `cases/arcas-short` directory.
+

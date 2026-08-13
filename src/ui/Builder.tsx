@@ -3,12 +3,15 @@ import { assembleRocket } from '../geometry/assemble';
 import { checkWatertight } from '../geometry/quality';
 import { writeStlAscii, writeStlBinary } from '../geometry/stl';
 import { hasErrors, validateSpec } from '../geometry/validate';
-import type { MeshData, RocketSpec, WatertightReport } from '../geometry/types';
+import type { MeshData, RocketSpec, Units, WatertightReport } from '../geometry/types';
 import { supabase } from '../auth/supabase';
 import { clonePreset, PRESETS } from '../presets/examples';
 import { BodyEditor } from './BodyEditor';
 import { FinEditor } from './FinEditor';
+import { LibraryMenu } from './LibraryMenu';
 import { QualityPanel } from './QualityPanel';
+import { Section } from './fields';
+import { copyShareUrl, writeSpecToUrl } from './shareUrl';
 import { TessellationPanel } from './TessellationPanel';
 import { Viewport } from './Viewport';
 import { loadSpec, saveSpec } from './storage';
@@ -24,9 +27,14 @@ export function Builder() {
   const [assembleError, setAssembleError] = useState<string | null>(null);
   const [wireframe, setWireframe] = useState(false);
   const [ascii, setAscii] = useState(false);
+  const [copied, setCopied] = useState(false);
   const debounced = useDebounced(spec, 160);
+  const urlDebounced = useDebounced(spec, 400);
 
   useEffect(() => saveSpec(spec), [spec]);
+  useEffect(() => {
+    writeSpecToUrl(urlDebounced);
+  }, [urlDebounced]);
 
   const issues = useMemo(() => validateSpec(debounced), [debounced]);
   const blocked = hasErrors(issues);
@@ -82,21 +90,43 @@ export function Builder() {
     URL.revokeObjectURL(a.href);
   }
 
+  async function onCopyLink() {
+    const ok = await copyShareUrl(spec);
+    if (!ok) return;
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  }
+
   const canExport = Boolean(mesh && report?.ok && !blocked && !assembleError);
 
   return (
     <div className="app">
       <header className="topbar">
-        <div>
-          <p className="eyebrow">Sounding rocket geometry</p>
+        <div className="title-block">
           <input
             className="title-input"
             value={spec.name}
             onChange={(e) => setSpec({ ...spec, name: e.target.value })}
             aria-label="Model name"
           />
+          <label className="units-select">
+            <span>Units</span>
+            <select
+              value={spec.units}
+              onChange={(e) => setSpec({ ...spec, units: e.target.value as Units })}
+              aria-label="Export units"
+            >
+              <option value="m">m</option>
+              <option value="mm">mm</option>
+              <option value="in">in</option>
+            </select>
+          </label>
         </div>
         <div className="topbar-actions">
+          <LibraryMenu spec={spec} onLoad={setSpec} />
+          <button type="button" className="btn" onClick={() => void onCopyLink()}>
+            {copied ? 'Copied' : 'Copy link'}
+          </button>
           <label className="check">
             <input type="checkbox" checked={wireframe} onChange={(e) => setWireframe(e.target.checked)} />
             Wireframe
@@ -109,7 +139,16 @@ export function Builder() {
         </div>
       </header>
       <aside className="sidebar">
-        <SectionPresets spec={spec} setSpec={setSpec} />
+        <Section title="Presets" collapsible defaultOpen={false}>
+          <div className="btn-row wrap">
+            {PRESETS.map((p) => (
+              <button key={p.id} type="button" className="btn" onClick={() => setSpec(clonePreset(p.id))}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <p className="muted tiny">Axis +x from the nose. Export uses {spec.units} with no conversion.</p>
+        </Section>
         <BodyEditor spec={spec} setSpec={setSpec} />
         <FinEditor spec={spec} setSpec={setSpec} />
         <TessellationPanel spec={spec} setSpec={setSpec} />
@@ -138,25 +177,5 @@ export function Builder() {
         </div>
       </footer>
     </div>
-  );
-}
-
-function SectionPresets({ spec, setSpec }: { spec: RocketSpec; setSpec: (s: RocketSpec) => void }) {
-  return (
-    <section className="panel-section">
-      <header>
-        <h2>Presets</h2>
-      </header>
-      <div className="btn-row wrap">
-        {PRESETS.map((p) => (
-          <button key={p.id} type="button" className="btn" onClick={() => setSpec(clonePreset(p.id))}>
-            {p.label}
-          </button>
-        ))}
-      </div>
-      <p className="muted tiny">
-        Axis +x from the nose. Export uses {spec.units} with no conversion.
-      </p>
-    </section>
   );
 }
