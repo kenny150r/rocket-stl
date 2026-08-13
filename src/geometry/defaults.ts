@@ -21,7 +21,7 @@ export function defaultNose(kind: NoseKind = 'vonKarman'): NoseSegment {
     powerN: 0.5,
     haackC: kind === 'haack' ? 1 / 3 : 0,
     ogiveRadius: 0,
-    bluntRadius: 0,
+    bluntRadius: 0.002,
   };
 }
 
@@ -62,7 +62,7 @@ export function defaultSpec(): RocketSpec {
   const nose = defaultNose('vonKarman');
   const tube = defaultCylinder(nose.baseDiameter);
   return {
-    name: 'sounding-rocket',
+    name: 'sounding-rocket', // editable top-bar title (RocketSpec.name)
     units: 'm',
     segments: [nose, tube],
     finSets: [defaultFinSet(nose.length + tube.length - 0.25)],

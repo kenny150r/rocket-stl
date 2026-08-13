@@ -107,6 +107,18 @@ export type WatertightReport = {
   area?: number;
   message: string;
   warnings: string[];
+  /** Non-blocking mesh quality notes (e.g. high-aspect slivers). */
+  hints: string[];
 };
 
-export type BlockingIssue = { level: 'error' | 'warning'; message: string };
+export type IssueTarget = {
+  kind: 'segment' | 'fin' | 'tessellation' | 'body';
+  id?: string;
+  field?: string;
+};
+
+export type BlockingIssue = {
+  level: 'error' | 'warning';
+  message: string;
+  target?: IssueTarget;
+};

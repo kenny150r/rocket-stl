@@ -1,24 +1,40 @@
-import type { RocketSpec, Tessellation } from '../geometry/types';
+import type { BlockingIssue, RocketSpec, Tessellation } from '../geometry/types';
+import { hasTarget } from '../geometry/validate';
 import { NumberField, Section } from './fields';
 
 type Props = {
   spec: RocketSpec;
   setSpec: (s: RocketSpec) => void;
+  issues: BlockingIssue[];
 };
 
-export function TessellationPanel({ spec, setSpec }: Props) {
+export function TessellationPanel({ spec, setSpec, issues }: Props) {
   const tes = spec.tessellation;
+  const tesErr = hasTarget(issues, 'tessellation');
   function patch(update: Partial<Tessellation>) {
     setSpec({ ...spec, tessellation: { ...tes, ...update } });
   }
   return (
-    <Section title="Tessellation" collapsible defaultOpen={false}>
-      <NumberField label="Circumferential nθ" value={tes.nTheta} step={4} min={12} onChange={(nTheta) => patch({ nTheta })} />
+    <Section
+      title="Tessellation"
+      collapsible
+      defaultOpen={tesErr}
+      badge={tesErr ? <span className="pill bad">Error</span> : undefined}
+    >
+      <NumberField
+        label="Circumferential nθ"
+        value={tes.nTheta}
+        step={4}
+        min={12}
+        invalid={hasTarget(issues, 'tessellation', undefined, 'nTheta')}
+        onChange={(nTheta) => patch({ nTheta })}
+      />
       <NumberField
         label="Axial samples / segment"
         value={tes.axialPerSegment}
         step={2}
         min={4}
+        invalid={hasTarget(issues, 'tessellation', undefined, 'axialPerSegment')}
         onChange={(axialPerSegment) => patch({ axialPerSegment })}
       />
       <NumberField

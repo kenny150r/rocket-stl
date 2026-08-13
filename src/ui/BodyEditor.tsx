@@ -1,6 +1,7 @@
 import { aftDiameter, syncDiameters } from '../geometry/body';
 import { defaultCylinder, defaultNose, defaultTaper } from '../geometry/defaults';
-import type { BodySegment, NoseKind, RocketSpec, TaperKind } from '../geometry/types';
+import type { BlockingIssue, BodySegment, NoseKind, RocketSpec, TaperKind } from '../geometry/types';
+import { hasTarget } from '../geometry/validate';
 import { NumberField, Section, SelectField } from './fields';
 
 const NOSE_KINDS: { id: NoseKind; label: string }[] = [
@@ -17,9 +18,10 @@ const NOSE_KINDS: { id: NoseKind; label: string }[] = [
 type Props = {
   spec: RocketSpec;
   setSpec: (s: RocketSpec) => void;
+  issues: BlockingIssue[];
 };
 
-export function BodyEditor({ spec, setSpec }: Props) {
+export function BodyEditor({ spec, setSpec, issues }: Props) {
   const unit = spec.units;
 
   function commit(segments: BodySegment[]) {
@@ -48,38 +50,36 @@ export function BodyEditor({ spec, setSpec }: Props) {
     commit(segments);
   }
 
+  const inv = (id: string, field: string) => hasTarget(issues, 'segment', id, field);
+
   return (
-    <Section
-      title="Body"
-      actions={
-        <div className="btn-row wrap">
-          <button type="button" className="btn" onClick={() => add('nose')}>
-            Nose
-          </button>
-          <button type="button" className="btn" onClick={() => add('cylinder')}>
-            Cylinder
-          </button>
-          <button type="button" className="btn" onClick={() => add('frustum')}>
-            Frustum
-          </button>
-          <button type="button" className="btn" onClick={() => add('flare')}>
-            Flare
-          </button>
-          <button type="button" className="btn" onClick={() => add('boattail')}>
-            Boat-tail
-          </button>
-        </div>
-      }
-    >
+    <Section title="Body">
+      <div className="btn-row wrap section-actions">
+        <button type="button" className="btn" onClick={() => add('nose')}>
+          Nose
+        </button>
+        <button type="button" className="btn" onClick={() => add('cylinder')}>
+          Cylinder
+        </button>
+        <button type="button" className="btn" onClick={() => add('frustum')}>
+          Frustum
+        </button>
+        <button type="button" className="btn" onClick={() => add('flare')}>
+          Flare
+        </button>
+        <button type="button" className="btn" onClick={() => add('boattail')}>
+          Boat-tail
+        </button>
+      </div>
       <ul className="stack">
         {spec.segments.map((seg, i) => (
-          <li key={seg.id} className="card">
+          <li key={seg.id} className={`card${hasTarget(issues, 'segment', seg.id) ? ' invalid' : ''}`}>
             <div className="card-head">
               <strong>
                 {i + 1}. {labelOf(seg)}
               </strong>
               <div className="btn-row">
-                <button type="button" className="btn icon" onClick={() => move(i, -1)} disabled={i === 0}>
+                <button type="button" className="btn icon" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Move up">
                   ↑
                 </button>
                 <button
@@ -87,6 +87,7 @@ export function BodyEditor({ spec, setSpec }: Props) {
                   className="btn icon"
                   onClick={() => move(i, 1)}
                   disabled={i === spec.segments.length - 1}
+                  aria-label="Move down"
                 >
                   ↓
                 </button>
@@ -95,6 +96,7 @@ export function BodyEditor({ spec, setSpec }: Props) {
                   className="btn icon danger"
                   onClick={() => commit(spec.segments.filter((s) => s.id !== seg.id))}
                   disabled={spec.segments.length <= 1}
+                  aria-label="Delete segment"
                 >
                   ×
                 </button>
@@ -118,15 +120,28 @@ export function BodyEditor({ spec, setSpec }: Props) {
                     </option>
                   ))}
                 </SelectField>
-                <NumberField label="Length" value={seg.length} unit={unit} onChange={(length) => patch(seg.id, { length })} />
+                <NumberField
+                  label="Length"
+                  value={seg.length}
+                  unit={unit}
+                  invalid={inv(seg.id, 'length')}
+                  onChange={(length) => patch(seg.id, { length })}
+                />
                 <NumberField
                   label="Base diameter"
                   value={seg.baseDiameter}
                   unit={unit}
+                  invalid={inv(seg.id, 'baseDiameter')}
                   onChange={(baseDiameter) => patch(seg.id, { baseDiameter })}
                 />
                 {seg.nose === 'power' && (
-                  <NumberField label="Exponent n" value={seg.powerN} step={0.05} onChange={(powerN) => patch(seg.id, { powerN })} />
+                  <NumberField
+                    label="Exponent n"
+                    value={seg.powerN}
+                    step={0.05}
+                    invalid={inv(seg.id, 'powerN')}
+                    onChange={(powerN) => patch(seg.id, { powerN })}
+                  />
                 )}
                 {seg.nose === 'haack' && (
                   <NumberField
@@ -166,11 +181,18 @@ export function BodyEditor({ spec, setSpec }: Props) {
             )}
             {seg.kind === 'cylinder' && (
               <>
-                <NumberField label="Length" value={seg.length} unit={unit} onChange={(length) => patch(seg.id, { length })} />
+                <NumberField
+                  label="Length"
+                  value={seg.length}
+                  unit={unit}
+                  invalid={inv(seg.id, 'length')}
+                  onChange={(length) => patch(seg.id, { length })}
+                />
                 <NumberField
                   label="Diameter"
                   value={seg.diameter}
                   unit={unit}
+                  invalid={inv(seg.id, 'diameter')}
                   onChange={(diameter) => patch(seg.id, { diameter })}
                 />
               </>
@@ -178,22 +200,25 @@ export function BodyEditor({ spec, setSpec }: Props) {
             {(seg.kind === 'frustum' || seg.kind === 'flare' || seg.kind === 'boattail') && (
               <>
                 {seg.kind === 'frustum' && (
-                  <SelectField
-                    label="Type"
-                    value={seg.kind}
-                    onChange={(v) => patch(seg.id, { kind: v as TaperKind })}
-                  >
+                  <SelectField label="Type" value={seg.kind} onChange={(v) => patch(seg.id, { kind: v as TaperKind })}>
                     <option value="frustum">Frustum</option>
                     <option value="flare">Flare</option>
                     <option value="boattail">Boat-tail</option>
                   </SelectField>
                 )}
-                <NumberField label="Length" value={seg.length} unit={unit} onChange={(length) => patch(seg.id, { length })} />
+                <NumberField
+                  label="Length"
+                  value={seg.length}
+                  unit={unit}
+                  invalid={inv(seg.id, 'length')}
+                  onChange={(length) => patch(seg.id, { length })}
+                />
                 <NumberField label="Fore diameter" value={seg.foreDiameter} unit={unit} disabled onChange={() => undefined} />
                 <NumberField
                   label="Aft diameter"
                   value={seg.aftDiameter}
                   unit={unit}
+                  invalid={inv(seg.id, 'aftDiameter')}
                   onChange={(aftDiameter) => patch(seg.id, { aftDiameter })}
                 />
               </>

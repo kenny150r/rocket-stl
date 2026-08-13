@@ -27,6 +27,7 @@ export function checkWatertight(mesh: MeshData, tol = 1e-9): WatertightReport {
   const { positions, indices } = mesh;
   const nTris = Math.floor(indices.length / 3);
   const warnings: string[] = [];
+  const hints: string[] = [];
   let nDegenerate = 0;
   let nOpenEdges = 0;
   let nNonmanifold = 0;
@@ -88,7 +89,11 @@ export function checkWatertight(mesh: MeshData, tol = 1e-9): WatertightReport {
   }
 
   if (!Number.isFinite(minEdge)) minEdge = 0;
-  if (worstAspect > 50) warnings.push(`Worst triangle aspect ratio is ${worstAspect.toFixed(1)} (> 50).`);
+  if (worstAspect > 50) {
+    hints.push(
+      `High-aspect slivers (worst ${worstAspect.toFixed(0)}:1). Export is still watertight; blunt the nose or raise nθ for a nicer CFD mesh.`,
+    );
+  }
 
   const ok = nOpenEdges === 0 && nNonmanifold === 0 && nDegenerate === 0 && nTris > 0;
   const message = `tris=${nTris} open_edges=${nOpenEdges} nonmanifold=${nNonmanifold} degenerate=${nDegenerate}`;
@@ -104,6 +109,7 @@ export function checkWatertight(mesh: MeshData, tol = 1e-9): WatertightReport {
     bbox: lo && hi ? { lo, hi } : null,
     message,
     warnings,
+    hints,
   };
 }
 

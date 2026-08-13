@@ -13,6 +13,17 @@ describe('watertight check', () => {
     expect(r.nTris).toBe(12);
   });
 
+  it('records high-aspect slivers as hints, not warnings', () => {
+    const mesh: MeshData = {
+      positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 0.001, 0]),
+      indices: new Uint32Array([0, 1, 2]),
+    };
+    const r = checkWatertight(mesh);
+    expect(r.warnings).toEqual([]);
+    expect(r.hints.length).toBeGreaterThan(0);
+    expect(r.worstAspect).toBeGreaterThan(50);
+  });
+
   it('flags a missing triangle as open edges', () => {
     const cube = unitCubeMesh();
     const mesh: MeshData = {

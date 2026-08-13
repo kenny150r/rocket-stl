@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { assembleRocket } from '../geometry/assemble';
+import { bodyLength } from '../geometry/body';
 import { checkWatertight } from '../geometry/quality';
 import { writeStlAscii, writeStlBinary } from '../geometry/stl';
 import { hasErrors, validateSpec } from '../geometry/validate';
@@ -14,11 +15,11 @@ import { Section } from './fields';
 import { copyShareUrl, writeSpecToUrl } from './shareUrl';
 import { TessellationPanel } from './TessellationPanel';
 import { Viewport } from './Viewport';
-import { loadSpec, saveSpec } from './storage';
 import { useDebounced } from './useDebounced';
+import { specFingerprint, useUndoableSpec } from './useUndoableSpec';
 
 export function Builder() {
-  const [spec, setSpec] = useState<RocketSpec>(loadSpec);
+  const { spec, setSpec, undo, redo, canUndo, canRedo } = useUndoableSpec();
   const [mesh, setMesh] = useState<MeshData | null>(null);
   const [report, setReport] = useState<WatertightReport | null>(null);
   const [volume, setVolume] = useState<number | undefined>();
@@ -28,25 +29,23 @@ export function Builder() {
   const [wireframe, setWireframe] = useState(false);
   const [ascii, setAscii] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [fitToken, setFitToken] = useState(0);
+  const baseline = useRef(specFingerprint(spec));
   const debounced = useDebounced(spec, 160);
   const urlDebounced = useDebounced(spec, 400);
 
-  useEffect(() => saveSpec(spec), [spec]);
   useEffect(() => {
     writeSpecToUrl(urlDebounced);
   }, [urlDebounced]);
 
   const issues = useMemo(() => validateSpec(debounced), [debounced]);
   const blocked = hasErrors(issues);
+  const errors = issues.filter((i) => i.level === 'error');
 
   useEffect(() => {
     if (blocked) {
-      setMesh(null);
-      setReport(null);
-      setVolume(undefined);
-      setArea(undefined);
-      setAssembleError(null);
       setAssembling(false);
+      setAssembleError(null);
       return;
     }
     let cancelled = false;
@@ -65,8 +64,6 @@ export function Builder() {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setMesh(null);
-        setReport(null);
         setAssembleError(err instanceof Error ? err.message : String(err));
       })
       .finally(() => {
@@ -97,7 +94,32 @@ export function Builder() {
     window.setTimeout(() => setCopied(false), 1600);
   }
 
+  function replaceSpec(next: RocketSpec) {
+    setSpec(next, { checkpoint: true });
+    baseline.current = specFingerprint(next);
+    setFitToken((n) => n + 1);
+  }
+
+  function applyPreset(id: string) {
+    if (specFingerprint(spec) !== baseline.current) {
+      const ok = window.confirm('Replace the current model with this preset? You can Undo afterward.');
+      if (!ok) return;
+    }
+    replaceSpec(clonePreset(id));
+  }
+
   const canExport = Boolean(mesh && report?.ok && !blocked && !assembleError);
+  const exportTitle = canExport
+    ? 'Download STL'
+    : blocked
+      ? errors.map((e) => e.message).join(' ')
+      : assembleError
+        ? assembleError
+        : report && !report.ok
+          ? report.message
+          : 'Waiting for a watertight mesh';
+
+  const overlayErrors = blocked ? errors.map((e) => e.message) : assembleError ? [assembleError] : [];
 
   return (
     <div className="app">
@@ -106,10 +128,11 @@ export function Builder() {
           <input
             className="title-input"
             value={spec.name}
+            placeholder="Model name"
             onChange={(e) => setSpec({ ...spec, name: e.target.value })}
             aria-label="Model name"
           />
-          <label className="units-select">
+          <label className="units-select" title="STL is written in these units with no conversion">
             <span>Units</span>
             <select
               value={spec.units}
@@ -123,14 +146,16 @@ export function Builder() {
           </label>
         </div>
         <div className="topbar-actions">
-          <LibraryMenu spec={spec} onLoad={setSpec} />
+          <LibraryMenu spec={spec} onLoad={replaceSpec} />
           <button type="button" className="btn" onClick={() => void onCopyLink()}>
             {copied ? 'Copied' : 'Copy link'}
           </button>
-          <label className="check">
-            <input type="checkbox" checked={wireframe} onChange={(e) => setWireframe(e.target.checked)} />
-            Wireframe
-          </label>
+          <button type="button" className="btn" disabled={!canUndo} onClick={undo} title="Undo (⌘Z)">
+            Undo
+          </button>
+          <button type="button" className="btn" disabled={!canRedo} onClick={redo} title="Redo (⇧⌘Z)">
+            Redo
+          </button>
           {supabase && (
             <button type="button" className="btn" onClick={() => void supabase?.auth.signOut()}>
               Sign out
@@ -142,19 +167,36 @@ export function Builder() {
         <Section title="Presets" collapsible defaultOpen={false}>
           <div className="btn-row wrap">
             {PRESETS.map((p) => (
-              <button key={p.id} type="button" className="btn" onClick={() => setSpec(clonePreset(p.id))}>
+              <button key={p.id} type="button" className="btn" onClick={() => applyPreset(p.id)}>
                 {p.label}
               </button>
             ))}
           </div>
-          <p className="muted tiny">Axis +x from the nose. Export uses {spec.units} with no conversion.</p>
+          <p className="muted tiny">Axis +x from the nose. Values are exported as {spec.units}, with no conversion.</p>
         </Section>
-        <BodyEditor spec={spec} setSpec={setSpec} />
-        <FinEditor spec={spec} setSpec={setSpec} />
-        <TessellationPanel spec={spec} setSpec={setSpec} />
+        <BodyEditor spec={spec} setSpec={setSpec} issues={issues} />
+        <FinEditor spec={spec} setSpec={setSpec} issues={issues} />
+        <TessellationPanel spec={spec} setSpec={setSpec} issues={issues} />
       </aside>
       <main className="viewport">
-        <Viewport mesh={mesh} wireframe={wireframe} />
+        <Viewport mesh={mesh} wireframe={wireframe} fitToken={fitToken} bodyLength={bodyLength(spec.segments)} />
+        <div className="viewport-chrome">
+          {assembling && <span className="pill busy">Building</span>}
+          <label className="check">
+            <input type="checkbox" checked={wireframe} onChange={(e) => setWireframe(e.target.checked)} />
+            Wireframe
+          </label>
+          <button type="button" className="btn" onClick={() => setFitToken((n) => n + 1)}>
+            Fit
+          </button>
+        </div>
+        {overlayErrors.length > 0 && (
+          <div className="viewport-banner" role="alert">
+            {overlayErrors.map((msg) => (
+              <p key={msg}>{msg}</p>
+            ))}
+          </div>
+        )}
       </main>
       <footer className="bottom">
         <QualityPanel
@@ -171,7 +213,13 @@ export function Builder() {
             <input type="checkbox" checked={ascii} onChange={(e) => setAscii(e.target.checked)} />
             ASCII STL
           </label>
-          <button type="button" className="btn primary" disabled={!canExport} onClick={download}>
+          <button
+            type="button"
+            className="btn primary"
+            disabled={!canExport}
+            title={exportTitle}
+            onClick={download}
+          >
             Export STL
           </button>
         </div>

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 type Props = {
   label: string;
@@ -9,23 +9,94 @@ type Props = {
   max?: number;
   unit?: string;
   disabled?: boolean;
+  invalid?: boolean;
 };
 
-export function NumberField({ label, value, onChange, step = 0.01, min, max, unit, disabled }: Props) {
+function formatDisplay(value: number): string {
+  if (!Number.isFinite(value)) return '';
+  return String(value);
+}
+
+function parseDraft(raw: string): number | null {
+  const t = raw.trim();
+  if (t === '' || t === '-' || t === '.' || t === '-.') return null;
+  if (/[eE][+-]?$/.test(t) || t.endsWith('.')) return null;
+  const n = Number(t);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function NumberField({
+  label,
+  value,
+  onChange,
+  step = 0.01,
+  min,
+  max,
+  unit,
+  disabled,
+  invalid,
+}: Props) {
+  const [focused, setFocused] = useState(false);
+  const [draft, setDraft] = useState('');
+  const timer = useRef(0);
+
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  function commit(n: number, immediate: boolean, clampNow: boolean) {
+    let x = n;
+    if (clampNow) {
+      if (min !== undefined) x = Math.max(min, x);
+      if (max !== undefined) x = Math.min(max, x);
+    }
+    if (immediate) {
+      window.clearTimeout(timer.current);
+      onChange(x);
+      return;
+    }
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => onChange(x), 250);
+  }
+
   return (
-    <label className="field">
+    <label className={`field${invalid ? ' invalid' : ''}${disabled ? ' disabled' : ''}`}>
       <span>{label}</span>
       <span className="field-input">
         <input
-          type="number"
-          value={Number.isFinite(value) ? value : 0}
-          step={step}
-          min={min}
-          max={max}
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
+          spellCheck={false}
+          value={focused ? draft : formatDisplay(value)}
           disabled={disabled}
+          aria-invalid={invalid || undefined}
+          onFocus={() => {
+            setFocused(true);
+            setDraft(formatDisplay(value));
+          }}
           onChange={(e) => {
-            const n = e.target.valueAsNumber;
-            if (Number.isFinite(n)) onChange(n);
+            const t = e.target.value;
+            setDraft(t);
+            const n = parseDraft(t);
+            if (n !== null) commit(n, false, false);
+          }}
+          onBlur={() => {
+            setFocused(false);
+            const n = parseDraft(draft);
+            if (n !== null) commit(n, true, true);
+            else window.clearTimeout(timer.current);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.currentTarget.blur();
+              return;
+            }
+            if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+            e.preventDefault();
+            const base = parseDraft(draft) ?? value;
+            const dir = e.key === 'ArrowUp' ? 1 : -1;
+            const next = base + dir * step;
+            setDraft(formatDisplay(next));
+            commit(next, true, true);
           }}
         />
         {unit ? <em>{unit}</em> : null}
@@ -39,16 +110,18 @@ export function SelectField({
   value,
   onChange,
   children,
+  invalid,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   children: ReactNode;
+  invalid?: boolean;
 }) {
   return (
-    <label className="field">
+    <label className={`field${invalid ? ' invalid' : ''}`}>
       <span>{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
+      <select value={value} onChange={(e) => onChange(e.target.value)} aria-invalid={invalid || undefined}>
         {children}
       </select>
     </label>
@@ -61,12 +134,14 @@ export function Section({
   actions,
   collapsible = false,
   defaultOpen = true,
+  badge,
 }: {
   title: string;
   children: ReactNode;
   actions?: ReactNode;
   collapsible?: boolean;
   defaultOpen?: boolean;
+  badge?: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const shown = !collapsible || open;
@@ -79,6 +154,7 @@ export function Section({
               {open ? '▾' : '▸'}
             </span>
             <h2>{title}</h2>
+            {badge}
           </button>
         ) : (
           <h2>{title}</h2>

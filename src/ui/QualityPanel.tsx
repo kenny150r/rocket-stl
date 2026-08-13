@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { BlockingIssue, WatertightReport } from '../geometry/types';
 
 type Props = {
@@ -11,20 +12,44 @@ type Props = {
 };
 
 export function QualityPanel({ report, issues, volume, area, units, assembling, assembleError }: Props) {
+  const [details, setDetails] = useState(false);
   const errors = issues.filter((i) => i.level === 'error');
   const ok = Boolean(report?.ok) && errors.length === 0 && !assembleError;
+  const hints = report?.hints ?? [];
+
+  let status = 'Blocked';
+  let tone: 'busy' | 'ok' | 'bad' = 'bad';
+  if (assembling) {
+    status = 'Building';
+    tone = 'busy';
+  } else if (ok) {
+    status = 'Watertight';
+    tone = 'ok';
+  }
+
+  const summary = assembling
+    ? 'Updating mesh…'
+    : ok && report
+      ? `${report.nTris.toLocaleString()} triangles`
+      : errors[0]?.message ?? assembleError ?? 'Cannot export';
+
   return (
     <div className="quality">
       <div className="quality-status">
-        <span className={`pill ${assembling ? 'busy' : ok ? 'ok' : 'bad'}`}>
-          {assembling ? 'Building' : ok ? 'Watertight' : 'Blocked'}
-        </span>
-        {report && <code>{report.message}</code>}
+        <span className={`pill ${tone}`}>{status}</span>
+        <span className="quality-summary">{summary}</span>
+        {report && (
+          <button type="button" className="btn" onClick={() => setDetails((d) => !d)}>
+            {details ? 'Hide details' : 'Details'}
+          </button>
+        )}
       </div>
-      {assembleError && <p className="error">{assembleError}</p>}
-      {errors.map((e) => (
-        <p key={e.message} className="error">
-          {e.message}
+      {ok && hints.length > 0 && !details && (
+        <p className="muted tiny">High-aspect slivers present — Details has CFD notes.</p>
+      )}
+      {details && hints.map((h) => (
+        <p key={h} className="hint">
+          {h}
         </p>
       ))}
       {report?.warnings.map((w) => (
@@ -32,7 +57,7 @@ export function QualityPanel({ report, issues, volume, area, units, assembling, 
           {w}
         </p>
       ))}
-      {report && (
+      {details && report && (
         <dl className="metrics">
           <div>
             <dt>Triangles</dt>
