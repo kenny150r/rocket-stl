@@ -1,3 +1,4 @@
+import { resolvedHingeX } from '../geometry/fins';
 import { bodyLength } from '../geometry/body';
 import { defaultFinSet } from '../geometry/defaults';
 import { resolvePlanform, type ResolvedPlanform } from '../geometry/planform';
@@ -83,6 +84,50 @@ export function FinEditor({ spec, setSpec, issues }: Props) {
                 />
                 <NumberField label="Roll offset" value={fin.rollDeg} unit="deg" step={1} onChange={(rollDeg) => patch(fin.id, { rollDeg })} />
                 <NumberField label="Cant" value={fin.cantDeg} unit="deg" step={0.1} onChange={(cantDeg) => patch(fin.id, { cantDeg })} />
+              </div>
+              <div className="field-group">
+                <h3>Hinge &amp; control</h3>
+                <NumberField
+                  label="Hinge from nose"
+                  value={resolvedHingeX(fin)}
+                  unit={unit}
+                  disabled={fin.hingeX == null}
+                  invalid={inv(fin.id, 'hingeX')}
+                  onChange={(hingeX) => patch(fin.id, { hingeX })}
+                />
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={fin.hingeX == null}
+                    onChange={(e) => patch(fin.id, { hingeX: e.target.checked ? null : resolvedHingeX(fin) })}
+                  />
+                  Auto (¼ root chord)
+                </label>
+                <NumberField
+                  label="Elevator"
+                  value={fin.elevatorDeg}
+                  unit="deg"
+                  step={0.5}
+                  onChange={(elevatorDeg) => patch(fin.id, { elevatorDeg })}
+                />
+                <NumberField
+                  label="Rudder"
+                  value={fin.rudderDeg}
+                  unit="deg"
+                  step={0.5}
+                  onChange={(rudderDeg) => patch(fin.id, { rudderDeg })}
+                />
+                <NumberField
+                  label="Aileron"
+                  value={fin.aileronDeg}
+                  unit="deg"
+                  step={0.5}
+                  onChange={(aileronDeg) => patch(fin.id, { aileronDeg })}
+                />
+                <p className="muted tiny">
+                  Spanwise hinge; auto station is ¼ root chord. +Elevator: trailing tips up. +Rudder: trailing tips of
+                  the vertical pair toward +Z (yaw). +Aileron: clockwise from aft looking forward.
+                </p>
               </div>
               <div className="field-group">
                 <h3>Shape</h3>

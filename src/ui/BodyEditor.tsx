@@ -54,21 +54,22 @@ export function BodyEditor({ spec, setSpec, issues }: Props) {
 
   return (
     <Section title="Body">
+      <p className="muted tiny add-legend">Add a segment to the stack. Nose inserts at the front; everything else appends aft.</p>
       <div className="btn-row wrap section-actions">
-        <button type="button" className="btn" onClick={() => add('nose')}>
-          Nose
+        <button type="button" className="btn" onClick={() => add('nose')} title="Insert a nose at the front of the stack">
+          Add nose
         </button>
-        <button type="button" className="btn" onClick={() => add('cylinder')}>
-          Cylinder
+        <button type="button" className="btn" onClick={() => add('cylinder')} title="Append a cylinder at the aft end">
+          Add cylinder
         </button>
-        <button type="button" className="btn" onClick={() => add('frustum')}>
-          Frustum
+        <button type="button" className="btn" onClick={() => add('frustum')} title="Append a frustum at the aft end">
+          Add frustum
         </button>
-        <button type="button" className="btn" onClick={() => add('flare')}>
-          Flare
+        <button type="button" className="btn" onClick={() => add('flare')} title="Append a flare at the aft end">
+          Add flare
         </button>
-        <button type="button" className="btn" onClick={() => add('boattail')}>
-          Boat-tail
+        <button type="button" className="btn" onClick={() => add('boattail')} title="Append a boat-tail at the aft end">
+          Add boat-tail
         </button>
       </div>
       <ul className="stack">

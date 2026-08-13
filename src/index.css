@@ -159,6 +159,7 @@ code { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; }
   width: 0.9em;
 }
 .section-actions { margin-bottom: 8px; }
+.add-legend { margin: 0 0 6px; }
 .field-group {
   margin-top: 8px;
   padding-top: 8px;

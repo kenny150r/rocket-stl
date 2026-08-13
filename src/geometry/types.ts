@@ -52,6 +52,14 @@ export type FinSet = {
   nFins: number;
   rollDeg: number;
   cantDeg: number;
+  /** Axial hinge station; `null` = ¼ root chord from the LE. */
+  hingeX: number | null;
+  /** + tips up (+Y) on the horizontal pair. */
+  elevatorDeg: number;
+  /** + trailing tips of the vertical pair toward +Z (yaw about +Y). */
+  rudderDeg: number;
+  /** + clockwise roll, viewed from aft looking forward. */
+  aileronDeg: number;
   planformMode: FinPlanformMode;
   preset: FinPreset;
   area: number;

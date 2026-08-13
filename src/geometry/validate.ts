@@ -129,6 +129,23 @@ export function validateSpec(spec: RocketSpec): BlockingIssue[] {
         issues.push({ level: 'error', message: `${fin.name}: root does not sit on the body.`, target: t('xLe') });
       }
     }
+    const xH =
+      typeof fin.hingeX === 'number' && Number.isFinite(fin.hingeX)
+        ? fin.hingeX
+        : fin.xLe + 0.25 * Math.max(pf.rootChord, 0);
+    if (xH < -1e-9 || xH > L + 1e-6) {
+      issues.push({
+        level: 'error',
+        message: `${fin.name}: hinge station ${xH} is outside the body [0, ${L}].`,
+        target: t('hingeX'),
+      });
+    } else if (radiusAt(spec.segments, xH) <= 1e-12) {
+      issues.push({
+        level: 'error',
+        message: `${fin.name}: hinge does not sit on the body.`,
+        target: t('hingeX'),
+      });
+    }
   }
 
   return issues;

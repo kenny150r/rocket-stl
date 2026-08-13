@@ -10,12 +10,42 @@ function rotateX(p: Vec3, phi: number): Vec3 {
   return [p[0], p[1] * c - p[2] * s, p[1] * s + p[2] * c];
 }
 
+/** Incidence about a spanwise (radial) hinge through `origin`. */
 function cantAboutSpan(p: Vec3, origin: Vec3, cant: number): Vec3 {
   const x = p[0] - origin[0];
   const z = p[2] - origin[2];
   const c = Math.cos(cant);
   const s = Math.sin(cant);
   return [origin[0] + x * c - z * s, p[1], origin[2] + x * s + z * c];
+}
+
+/** Default hinge: quarter-chord of the root, on the body. */
+export function autoHingeX(fin: FinSet): number {
+  const pf = resolvePlanform(fin);
+  return fin.xLe + 0.25 * Math.max(pf.rootChord, 0);
+}
+
+export function resolvedHingeX(fin: FinSet): number {
+  return typeof fin.hingeX === 'number' && Number.isFinite(fin.hingeX) ? fin.hingeX : autoHingeX(fin);
+}
+
+export function copyRollRad(fin: FinSet, index: number): number {
+  const n = Math.max(1, Math.round(fin.nFins));
+  return ((fin.rollDeg * Math.PI) / 180) + (TAU * index) / n;
+}
+
+/**
+ * Local spanwise hinge angle for copy `index`.
+ * +elevator: horizontal-pair trailing tips toward +Y.
+ * +rudder: vertical-pair trailing tips toward +Z (yaw about +Y).
+ * +aileron: clockwise when viewed from aft looking forward.
+ */
+export function localHingeDeg(fin: FinSet, index: number): number {
+  const φ = copyRollRad(fin, index);
+  const e = fin.elevatorDeg ?? 0;
+  const r = fin.rudderDeg ?? 0;
+  const a = fin.aileronDeg ?? 0;
+  return (fin.cantDeg ?? 0) - a - e * Math.sin(φ) + r * Math.cos(φ);
 }
 
 /**
@@ -53,14 +83,16 @@ export function airfoilSection(
   return pts;
 }
 
-export function finHullPoints(spec: RocketSpec, fin: FinSet): Vec3[] {
+export function finHullPoints(spec: RocketSpec, fin: FinSet, localDeg?: number): Vec3[] {
   const pf = resolvePlanform(fin);
   const tes = spec.tessellation;
   const n = tes.finSectionSamples;
   const inset = tes.finRootInsetFrac;
   const sweep = (pf.sweepLeDeg * Math.PI) / 180;
   const tanS = Math.tan(sweep);
-  const cant = (fin.cantDeg * Math.PI) / 180;
+  const hinge = (localDeg ?? fin.cantDeg ?? 0) * (Math.PI / 180);
+  const xH = resolvedHingeX(fin);
+  const origin: Vec3 = [xH, radiusAt(spec.segments, xH), 0];
 
   const rootAf = airfoilSection(pf.rootChord, fin.thickness, fin.leRadius, fin.section, n);
   const tipChord = Math.max(pf.tipChord, 1e-6 * Math.max(pf.rootChord, 1e-6));
@@ -71,14 +103,13 @@ export function finHullPoints(spec: RocketSpec, fin: FinSet): Vec3[] {
   const tipAf = airfoilSection(tipChord, tipTh, Math.min(fin.leRadius, tipTh / 2), fin.section, n);
 
   const rBodyLe = radiusAt(spec.segments, fin.xLe);
-  const origin: Vec3 = [fin.xLe + 0.5 * pf.rootChord, rBodyLe, 0];
 
   const pts: Vec3[] = [];
   const emit = (af: { s: number; t: number }[], xLe: number, radial: (x: number) => number) => {
     for (const q of af) {
       const x = xLe + q.s;
       let p: Vec3 = [x, radial(x), q.t];
-      if (cant !== 0) p = cantAboutSpan(p, origin, cant);
+      if (hinge !== 0) p = cantAboutSpan(p, origin, hinge);
       pts.push(p);
     }
   };
@@ -94,10 +125,12 @@ export function finHullPoints(spec: RocketSpec, fin: FinSet): Vec3[] {
 }
 
 export function allFinCopies(spec: RocketSpec, fin: FinSet): Vec3[][] {
-  const base = finHullPoints(spec, fin);
   const n = Math.max(1, Math.round(fin.nFins));
-  const roll0 = (fin.rollDeg * Math.PI) / 180;
   const copies: Vec3[][] = [];
-  for (let i = 0; i < n; i++) copies.push(base.map((p) => rotateX(p, roll0 + (TAU * i) / n)));
+  for (let i = 0; i < n; i++) {
+    const base = finHullPoints(spec, fin, localHingeDeg(fin, i));
+    const phi = copyRollRad(fin, i);
+    copies.push(base.map((p) => rotateX(p, phi)));
+  }
   return copies;
 }

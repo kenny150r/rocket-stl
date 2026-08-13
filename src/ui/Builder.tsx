@@ -11,7 +11,7 @@ import { BodyEditor } from './BodyEditor';
 import { FinEditor } from './FinEditor';
 import { LibraryMenu } from './LibraryMenu';
 import { QualityPanel } from './QualityPanel';
-import { Section } from './fields';
+import { Section, SelectField } from './fields';
 import { copyShareUrl, writeSpecToUrl } from './shareUrl';
 import { TessellationPanel } from './TessellationPanel';
 import { Viewport } from './Viewport';
@@ -30,6 +30,7 @@ export function Builder() {
   const [ascii, setAscii] = useState(false);
   const [copied, setCopied] = useState(false);
   const [fitToken, setFitToken] = useState(0);
+  const [presetId, setPresetId] = useState('');
   const baseline = useRef(specFingerprint(spec));
   const debounced = useDebounced(spec, 160);
   const urlDebounced = useDebounced(spec, 400);
@@ -101,11 +102,13 @@ export function Builder() {
   }
 
   function applyPreset(id: string) {
+    if (!id) return;
     if (specFingerprint(spec) !== baseline.current) {
       const ok = window.confirm('Replace the current model with this preset? You can Undo afterward.');
       if (!ok) return;
     }
     replaceSpec(clonePreset(id));
+    setPresetId(id);
   }
 
   const canExport = Boolean(mesh && report?.ok && !blocked && !assembleError);
@@ -165,14 +168,15 @@ export function Builder() {
       </header>
       <aside className="sidebar">
         <Section title="Presets" collapsible defaultOpen={false}>
-          <div className="btn-row wrap">
+          <SelectField label="Load" value={presetId} onChange={(id) => applyPreset(id)}>
+            <option value="">Choose a starting point…</option>
             {PRESETS.map((p) => (
-              <button key={p.id} type="button" className="btn" onClick={() => applyPreset(p.id)}>
+              <option key={p.id} value={p.id}>
                 {p.label}
-              </button>
+              </option>
             ))}
-          </div>
-          <p className="muted tiny">Axis +x from the nose. Values are exported as {spec.units}, with no conversion.</p>
+          </SelectField>
+          <p className="muted tiny">Replaces the current model. Undo brings it back. Axis +x from the nose; values export as {spec.units}.</p>
         </Section>
         <BodyEditor spec={spec} setSpec={setSpec} issues={issues} />
         <FinEditor spec={spec} setSpec={setSpec} issues={issues} />
