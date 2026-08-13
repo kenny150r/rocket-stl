@@ -4,13 +4,15 @@
  *   npm run export:arcas
  *
  * Writes rocket-stl/export/ and, if present, the sibling solver case folder.
- * Body-only also writes an ASCII multi-solid with component labels so the
- * solver can report forebody CA (no base) separately from the closed base.
+ * Binary STLs carry per-triangle component IDs plus a sidecar JSON. Body-only
+ * also writes an ASCII multi-solid so the solver can report forebody CA
+ * (no base) separately from the closed base.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assembleRocket } from '../src/geometry/assemble';
+import { classifyComponents, componentsSidecar } from '../src/geometry/components';
 import { labelRocketMesh, writeStlAsciiLabeled } from '../src/geometry/labels';
 import { checkWatertight } from '../src/geometry/quality';
 import { writeStlBinary } from '../src/geometry/stl';
@@ -41,10 +43,13 @@ async function exportOne(kind: ArcasKind, fins: boolean, fileStem: string, dests
   if (!wt.ok) {
     throw new Error(`${spec.name} is not watertight: ${wt.message}`);
   }
-  const buf = writeStlBinary(result.mesh, spec.name);
+  const ids = classifyComponents(result.mesh, spec);
+  const buf = writeStlBinary(result.mesh, spec.name, ids);
   const bytes = Buffer.from(buf);
+  const sidecar = componentsSidecar(spec);
   for (const dir of dests) {
     const path = writeAll(dir, `${fileStem}.stl`, bytes);
+    writeAll(dir, `${fileStem}.components.json`, sidecar);
     console.log(`  wrote ${path}  (${wt.nTris} tris, V=${result.volume.toExponential(4)} m³)`);
   }
   if (!fins) {

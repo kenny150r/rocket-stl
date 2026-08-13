@@ -1,6 +1,7 @@
 import { defaultTessellation } from '../geometry/defaults';
+import { ensureLabelGroups } from '../geometry/components';
 import { newId } from '../geometry/ids';
-import type { BodySegment, FinSet, NoseKind, RocketSpec, Tessellation, Units } from '../geometry/types';
+import type { BodySegment, FinSet, LabelGroup, NoseKind, RocketSpec, Tessellation, Units } from '../geometry/types';
 
 const PREFIX = 's=';
 const MAX_HREF = 12_000;
@@ -25,13 +26,27 @@ export function coerceSpec(raw: unknown): RocketSpec | null {
     }
   }
   const tesIn = o.tessellation && typeof o.tessellation === 'object' ? (o.tessellation as Partial<Tessellation>) : {};
-  return {
+  const labelGroups: LabelGroup[] = [];
+  if (Array.isArray(o.labelGroups)) {
+    for (const item of o.labelGroups) {
+      if (!item || typeof item !== 'object') continue;
+      const g = item as Record<string, unknown>;
+      const members = Array.isArray(g.members) ? g.members.filter((m): m is string => typeof m === 'string') : [];
+      labelGroups.push({
+        id: typeof g.id === 'string' && g.id ? g.id : newId(),
+        name: typeof g.name === 'string' ? g.name : 'Group',
+        members,
+      });
+    }
+  }
+  return ensureLabelGroups({
     name: typeof o.name === 'string' && o.name.trim() ? o.name : 'rocket',
     units,
     segments,
     finSets,
     tessellation: { ...defaultTessellation(), ...tesIn },
-  };
+    labelGroups,
+  });
 }
 
 function coerceSegment(item: unknown): BodySegment | null {

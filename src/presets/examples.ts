@@ -1,4 +1,5 @@
 import { arcasSpec } from './arcas';
+import { ensureLabelGroups } from '../geometry/components';
 import { defaultCylinder, defaultFinSet, defaultNose, defaultSpec, defaultTaper, defaultTessellation } from '../geometry/defaults';
 import { newId } from '../geometry/ids';
 import type { RocketSpec } from '../geometry/types';
@@ -92,5 +93,5 @@ export function clonePreset(id: string): RocketSpec {
   const spec = p.spec();
   spec.segments = spec.segments.map((s) => ({ ...s, id: newId() }));
   spec.finSets = spec.finSets.map((f) => ({ ...f, id: newId() }));
-  return spec;
+  return ensureLabelGroups(spec);
 }

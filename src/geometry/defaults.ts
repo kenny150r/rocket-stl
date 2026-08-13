@@ -1,3 +1,4 @@
+import { ensureLabelGroups } from './components';
 import type { CylinderSegment, FinSet, NoseKind, NoseSegment, TaperKind, TaperSegment, Tessellation, RocketSpec } from './types';
 import { newId } from './ids';
 
@@ -66,11 +67,11 @@ export function defaultFinSet(xLe = 1.35, name = 'Aft fins'): FinSet {
 export function defaultSpec(): RocketSpec {
   const nose = defaultNose('vonKarman');
   const tube = defaultCylinder(nose.baseDiameter);
-  return {
+  return ensureLabelGroups({
     name: 'sounding-rocket', // editable top-bar title (RocketSpec.name)
     units: 'm',
     segments: [nose, tube],
     finSets: [defaultFinSet(nose.length + tube.length - 0.25)],
     tessellation: defaultTessellation(),
-  };
+  });
 }

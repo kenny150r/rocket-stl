@@ -63,7 +63,7 @@ If the repo is not named `rocket-stl`, change `base` in `vite.config.ts` to matc
 
 ## CFD handoff
 
-The default STL is a single watertight shell (fins are unioned). Point an external cut-cell solver at `geometry.files = ["rocket.stl"]`. Overlapping parts that are not Boolean-unioned will not be repaired by this app after export.
+The default STL is a single watertight shell (fins are unioned). Binary export writes a component ID in each triangle’s uint16 attribute and a sidecar `name.components.json` with names and load groups (base, fins, body, forebody). ASCII STL has no attribute channel. Point a cut-cell solver at `geometry.files = ["rocket.stl"]` and `geometry.components = "rocket.components.json"`. Overlapping parts that are not Boolean-unioned will not be repaired by this app after export.
 
 `npm run export:arcas` also writes `arcas_short_body_labeled.stl`, an ASCII multi-solid (`nose`, `cylinder`, `boattail`, `base`) so the solver can report forebody loads without the closed base.
 
@@ -85,5 +85,5 @@ Compare Euler **CN, Cm** and **CA vs CA,corr** (base-corrected). Skip the docume
 npm run export:arcas
 ```
 
-Writes `export/arcas_short_body.stl` and `export/arcas_short.stl`, and copies them into `../ext-aero-3d/cases/arcas-short/` when that folder exists. Solver inputs live in the [ext-aero-3d](https://github.com/kenny150r/ext-aero-3d) `cases/arcas-short` directory.
+Writes `export/arcas_short_body.stl` and `export/arcas_short.stl` plus matching `.components.json` sidecars, and copies them into `../ext-aero-3d/cases/arcas-short/` when that folder exists. Solver inputs live in the [ext-aero-3d](https://github.com/kenny150r/ext-aero-3d) `cases/arcas-short` directory.
 

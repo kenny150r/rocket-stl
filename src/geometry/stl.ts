@@ -21,7 +21,7 @@ function tri(positions: Float32Array, indices: Uint32Array, t: number): [Vec3, V
   ];
 }
 
-export function writeStlBinary(mesh: MeshData, name = 'rocket'): ArrayBuffer {
+export function writeStlBinary(mesh: MeshData, name = 'rocket', components?: Uint16Array): ArrayBuffer {
   const n = Math.floor(mesh.indices.length / 3);
   const buf = new ArrayBuffer(84 + n * 50);
   const view = new DataView(buf);
@@ -46,10 +46,24 @@ export function writeStlBinary(mesh: MeshData, name = 'rocket'): ArrayBuffer {
       view.setFloat32(off + 8, p[2], true);
       off += 12;
     }
-    view.setUint16(off, 0, true);
+    const attr = components && t < components.length ? components[t] : 0;
+    view.setUint16(off, attr, true);
     off += 2;
   }
   return buf;
+}
+
+export function readStlBinaryAttributes(buf: ArrayBuffer): Uint16Array {
+  const view = new DataView(buf);
+  const n = view.getUint32(80, true);
+  const out = new Uint16Array(n);
+  let off = 84;
+  for (let t = 0; t < n; t++) {
+    off += 48;
+    out[t] = view.getUint16(off, true);
+    off += 2;
+  }
+  return out;
 }
 
 export function writeStlAscii(mesh: MeshData, name = 'rocket'): string {

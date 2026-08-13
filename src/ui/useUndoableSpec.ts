@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ensureLabelGroups } from '../geometry/components';
 import type { RocketSpec } from '../geometry/types';
 import { loadSpec, saveSpec } from './storage';
 
@@ -31,6 +32,7 @@ export function useUndoableSpec() {
   useEffect(() => saveSpec(spec), [spec]);
 
   const setSpec = useCallback((next: RocketSpec, opts?: { checkpoint?: boolean }) => {
+    next = ensureLabelGroups(next);
     const prev = specRef.current;
     if (same(prev, next)) return;
     const now = Date.now();

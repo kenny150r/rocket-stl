@@ -86,12 +86,25 @@ export type Tessellation = {
   finRootInsetFrac: number;
 };
 
+export type LabelGroup = {
+  id: string;
+  name: string;
+  members: string[];
+};
+
+export type AtomicComponent = {
+  id: number;
+  key: string;
+  name: string;
+};
+
 export type RocketSpec = {
   name: string;
   units: Units;
   segments: BodySegment[];
   finSets: FinSet[];
   tessellation: Tessellation;
+  labelGroups?: LabelGroup[];
 };
 
 export type ProfilePoint = { x: number; r: number };

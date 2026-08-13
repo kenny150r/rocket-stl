@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { classifyComponents, componentsSidecar } from '../geometry/components';
 import { assembleRocket } from '../geometry/assemble';
 import { bodyLength } from '../geometry/body';
 import { checkWatertight } from '../geometry/quality';
@@ -9,6 +10,7 @@ import { supabase } from '../auth/supabase';
 import { clonePreset, PRESETS } from '../presets/examples';
 import { BodyEditor } from './BodyEditor';
 import { FinEditor } from './FinEditor';
+import { LabelsPanel } from './LabelsPanel';
 import { LibraryMenu } from './LibraryMenu';
 import { QualityPanel } from './QualityPanel';
 import { Section, SelectField } from './fields';
@@ -75,17 +77,27 @@ export function Builder() {
     };
   }, [debounced, blocked]);
 
+  function saveBlob(blob: Blob, filename: string) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   function download() {
     if (!mesh || !report?.ok) return;
     const name = spec.name.replace(/[^\w.-]+/g, '_') || 'rocket';
-    const blob = ascii
-      ? new Blob([writeStlAscii(mesh, name)], { type: 'model/stl' })
-      : new Blob([writeStlBinary(mesh, name)], { type: 'model/stl' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `${name}.stl`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    if (ascii) {
+      saveBlob(new Blob([writeStlAscii(mesh, name)], { type: 'model/stl' }), `${name}.stl`);
+      return;
+    }
+    const ids = classifyComponents(mesh, spec);
+    saveBlob(new Blob([writeStlBinary(mesh, name, ids)], { type: 'model/stl' }), `${name}.stl`);
+    saveBlob(
+      new Blob([componentsSidecar(spec)], { type: 'application/json' }),
+      `${name}.components.json`,
+    );
   }
 
   async function onCopyLink() {
@@ -180,6 +192,7 @@ export function Builder() {
         </Section>
         <BodyEditor spec={spec} setSpec={setSpec} issues={issues} />
         <FinEditor spec={spec} setSpec={setSpec} issues={issues} />
+        <LabelsPanel spec={spec} setSpec={setSpec} />
         <TessellationPanel spec={spec} setSpec={setSpec} issues={issues} />
       </aside>
       <main className="viewport">

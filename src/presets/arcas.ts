@@ -1,4 +1,5 @@
 import { defaultCylinder, defaultFinSet, defaultNose, defaultTaper, defaultTessellation } from '../geometry/defaults';
+import { ensureLabelGroups } from '../geometry/components';
 import type { RocketSpec } from '../geometry/types';
 
 /**
@@ -56,14 +57,17 @@ export function arcasSpec(kind: ArcasKind, fins: boolean): RocketSpec {
   const xLe = arcasCal(totalCal) - arcasCal(ARCAS_FIN_TE_FROM_BASE_CAL) - rootChord;
 
   const nose = defaultNose('tangentOgive');
+  nose.id = 'arcas-nose';
   nose.length = noseL;
   nose.baseDiameter = d;
   nose.bluntRadius = ARCAS_BLUNT_IN * ARCAS_IN_M;
 
   const cylinder = defaultCylinder(d);
+  cylinder.id = 'arcas-cyl';
   cylinder.length = cylL;
 
   const boat = defaultTaper('boattail', d);
+  boat.id = 'arcas-boat';
   boat.length = boatL;
   boat.aftDiameter = arcasCal(ARCAS_BOAT_AFT_CAL);
 
@@ -82,6 +86,7 @@ export function arcasSpec(kind: ArcasKind, fins: boolean): RocketSpec {
 
   if (fins) {
     const f = defaultFinSet(xLe, 'Arcas tail');
+    f.id = 'arcas-fins';
     f.nFins = 4;
     f.rollDeg = 0;
     f.cantDeg = 0;
@@ -97,7 +102,7 @@ export function arcasSpec(kind: ArcasKind, fins: boolean): RocketSpec {
     spec.finSets = [f];
   }
 
-  return spec;
+  return ensureLabelGroups(spec);
 }
 
 export function arcasReference(kind: ArcasKind): {
